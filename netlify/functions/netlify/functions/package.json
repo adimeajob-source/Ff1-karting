@@ -1,8 +1,0 @@
-{
-  "name": "ff1-karting-functions",
-  "version": "1.0.0",
-  "description": "FF1 Karting League — Netlify scheduled functions",
-  "engines": {
-    "node": "18"
-  }
-}
