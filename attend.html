@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#E8002D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FF1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FF1 — Race Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;700;900&family=Share+Tech+Mono&display=swap">
+<style>
+  :root {
+    --red:#E8002D; --bg:#0a0a0a; --bg2:#111; --border:#222;
+    --text:#f0f0f0; --muted:#666; --gold:#FFD700;
+    --mono:'Share Tech Mono',monospace;
+    --green:#2ecc71; --yellow:#f1c40f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;}
+  body::before{content:'';position:fixed;inset:0;z-index:0;
+    background-image:linear-gradient(rgba(232,0,45,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(232,0,45,0.06) 1px,transparent 1px);
+    background-size:60px 60px;pointer-events:none;}
+  .wrap{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem;}
+  .top-bar{position:fixed;top:0;left:0;right:0;z-index:10;height:56px;background:rgba(10,10,10,0.9);border-bottom:2px solid var(--red);display:flex;align-items:center;padding:0 1.5rem;backdrop-filter:blur(8px);}
+  .top-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:0.05em;text-decoration:none;color:var(--text);}
+  .top-logo span{color:var(--red);}
+  .top-back{margin-left:auto;font-family:var(--mono);font-size:0.7rem;color:var(--muted);text-decoration:none;letter-spacing:0.1em;}
+  .top-back:hover{color:var(--text);}
+  .card{width:100%;max-width:520px;margin-top:72px;background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--red);padding:2rem;animation:fadeUp 0.5s ease both;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .round-tag{font-family:var(--mono);font-size:0.7rem;color:var(--red);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.5rem;}
+  .venue-name{font-weight:900;font-size:2.4rem;line-height:1;margin-bottom:0.3rem;}
+  .venue-meta{font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-bottom:1.5rem;}
+  .venue-meta span{color:var(--text);}
+  hr{border:none;border-top:1px solid var(--border);margin-bottom:1.5rem;}
+  .question{font-weight:700;font-size:1.2rem;letter-spacing:0.05em;margin-bottom:1rem;color:var(--muted);}
+  .question span{color:var(--text);}
+  .driver-select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.75rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:700;cursor:pointer;margin-bottom:1rem;appearance:none;}
+  .driver-select:focus{outline:1px solid var(--red);}
+  .response-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1.5rem;}
+  .res-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.3rem;padding:1rem 0.5rem;background:var(--bg);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:0.05em;transition:all 0.15s;line-height:1;}
+  .res-btn .emoji{font-size:1.6rem;}
+  .res-btn:hover{border-color:var(--text);color:var(--text);}
+  .res-btn.active-yes{background:#0a2e18;border-color:var(--green);color:var(--green);}
+  .res-btn.active-maybe{background:#2e2a00;border-color:var(--yellow);color:var(--yellow);}
+  .res-btn.active-no{background:#2e0a0a;border-color:var(--red);color:var(--red);}
+  .submit-btn{width:100%;padding:1rem;background:var(--red);color:white;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.2rem;letter-spacing:0.15em;text-transform:uppercase;transition:background 0.15s,transform 0.1s;display:none;}
+  .submit-btn:hover{background:#c4002a;transform:translateY(-1px);}
+  .submit-btn.show{display:block;}
+  .counts{display:flex;gap:1.5rem;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;}
+  .count-item{display:flex;flex-direction:column;align-items:center;gap:0.2rem;flex:1;}
+  .count-num{font-weight:900;font-size:2rem;line-height:1;}
+  .count-num.yes{color:var(--green);} .count-num.maybe{color:var(--yellow);} .count-num.no{color:var(--red);}
+  .count-label{font-family:var(--mono);font-size:0.6rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;}
+  .status-msg{font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:1rem;min-height:1.2em;text-align:center;}
+  .status-msg.success{color:var(--green);} .status-msg.error{color:var(--red);}
+  .closed-card{width:100%;max-width:520px;margin-top:72px;text-align:center;padding:3rem 2rem;background:var(--bg2);border:1px solid var(--border);animation:fadeUp 0.5s ease both;}
+  .closed-icon{font-size:3rem;margin-bottom:1rem;}
+  .closed-title{font-weight:900;font-size:1.8rem;margin-bottom:0.5rem;}
+  .closed-sub{font-family:var(--mono);font-size:0.75rem;color:var(--muted);}
+  .loading{font-family:var(--mono);font-size:0.8rem;color:var(--muted);letter-spacing:0.2em;animation:pulse 1.5s ease infinite;margin-top:72px;}
+  @keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="top-logo" href="index.html">FF<span>1</span></a>
+  <a class="top-back" href="index.html">← Back to site</a>
+</div>
+
+<div class="wrap">
+  <div id="loadingEl" class="loading">LOADING...</div>
+  <div id="mainCard" class="card" style="display:none;"></div>
+  <div id="closedCard" class="closed-card" style="display:none;"></div>
+</div>
+
+<!-- Firebase via compat SDK (works without bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('ArPbEbi3lroQ3lqvB');</script>
+
+<script>
+  // ── Firebase init ──
+  firebase.initializeApp({
+    apiKey: "AIzaSyAm0yRhM9Dsz2njjC9-qoVzQG78PtPIJRc",
+    authDomain: "fatfurious1-343e2.firebaseapp.com",
+    projectId: "fatfurious1-343e2",
+    storageBucket: "fatfurious1-343e2.firebasestorage.app",
+    messagingSenderId: "159080678325",
+    appId: "1:159080678325:web:6855e08dac86b588ae4ffc"
+  });
+  const db = firebase.firestore();
+
+  // ── Venue data ──
+  const venues = [
+    { round:"Round 1",  name:"Albion",          sub:"Ace Karts",           date:"Sun 15 Mar 2026",    raceDate:new Date('2026-03-15') },
+    { round:"Round 2",  name:"Dandenong South", sub:"Le Mans Lakeside",    date:"Sun 12 Apr 2026",    raceDate:new Date('2026-04-12') },
+    { round:"Round 3",  name:"Campbellfield",   sub:"Powerplay",           date:"9–10 May 2026",      raceDate:new Date('2026-05-10') },
+    { round:"Round 4",  name:"Thomastown",      sub:"Oz Ekarts",           date:"30–31 May 2026",     raceDate:new Date('2026-05-31') },
+    { round:"Round 5",  name:"Moorabbin",       sub:"Powerplay",           date:"27–28 Jun 2026",     raceDate:new Date('2026-06-28') },
+    { round:"Round 6",  name:"Bayswater",       sub:"Karting Madness",     date:"25–26 Jul 2026",     raceDate:new Date('2026-07-26') },
+    { round:"Round 7",  name:"West Footscray",  sub:"Battlekart",          date:"22–23 Aug 2026",     raceDate:new Date('2026-08-23') },
+    { round:"Round 8",  name:"Braybrook",       sub:"Powerplay",           date:"TBD Sep 2026",       raceDate:new Date('2026-09-15') },
+    { round:"Round 9",  name:"Port Melbourne",  sub:"Aus Carts",           date:"17–18 Oct 2026",     raceDate:new Date('2026-10-18') },
+    { round:"Round 10", name:"Dandenong South", sub:"Le Mans Penrite",     date:"31 Oct–1 Nov 2026",  raceDate:new Date('2026-11-01') },
+    { round:"Round 11", name:"Braybrook",       sub:"Karting Madness",     date:"21–22 Nov 2026",     raceDate:new Date('2026-11-22') },
+    { round:"Special",  name:"Phillip Island",  sub:"Special Event",       date:"5–6 Dec 2026",       raceDate:new Date('2026-12-06') },
+  ];
+
+  const drivers = ['Alan','Chris','Clem','Daniel','David N','David R','Euge','Gavin',
+    'James','Kosta','Ky','Matt C','Matt S','May','Michael','Peter',
+    'Pip','Rian','Richard','Rob','Tim'].sort();
+
+  // ── Parse ?round=N ──
+  const params   = new URLSearchParams(location.search);
+  const roundNum = parseInt(params.get('round') || '3', 10);
+  const venue    = venues[roundNum - 1];
+
+  const loadingEl  = document.getElementById('loadingEl');
+  const mainCard   = document.getElementById('mainCard');
+  const closedCard = document.getElementById('closedCard');
+
+  function hide(el){ el.style.display='none'; }
+  function show(el, type){ el.style.display = type||'block'; }
+
+  if (!venue) {
+    hide(loadingEl);
+    show(closedCard);
+    closedCard.innerHTML = `<div class="closed-icon">🏁</div><div class="closed-title">Round Not Found</div><div class="closed-sub">Check the URL and try again.</div>`;
+  } else {
+    const today    = new Date(); today.setHours(0,0,0,0);
+    const dayAfter = new Date(venue.raceDate); dayAfter.setDate(dayAfter.getDate()+1);
+    const isClosed = dayAfter <= today;
+
+    hide(loadingEl);
+
+    if (isClosed) {
+      show(closedCard);
+      closedCard.innerHTML = `<div class="closed-icon">🏁</div><div class="closed-title">Registration Closed</div><div class="closed-sub">${venue.round} — ${venue.name} has already taken place.</div>`;
+    } else {
+      show(mainCard);
+      const driverOpts = drivers.map(d=>`<option value="${d}">${d}</option>`).join('');
+      mainCard.innerHTML = `
+        <div class="round-tag">// ${venue.round} · FF1 2026</div>
+        <div class="venue-name">${venue.name}</div>
+        <div class="venue-meta">${venue.sub} &nbsp;·&nbsp; <span>${venue.date}</span></div>
+        <hr>
+        <div class="question">Are you <span>racing</span>?</div>
+        <select class="driver-select" id="driverSel">
+          <option value="">Select your name...</option>
+          ${driverOpts}
+        </select>
+        <div class="response-btns">
+          <button class="res-btn" id="btn-yes"   onclick="selectResponse('yes')"><span class="emoji">✅</span>Yes</button>
+          <button class="res-btn" id="btn-maybe" onclick="selectResponse('maybe')"><span class="emoji">❓</span>I have a fear of commitment — maybe</button>
+          <button class="res-btn" id="btn-no"    onclick="selectResponse('no')"><span class="emoji">❌</span>No</button>
+        </div>
+        <button class="submit-btn" id="submitBtn" onclick="submitResponse()">Confirm Response</button>
+        <div class="status-msg" id="statusMsg"></div>
+        <div class="counts">
+          <div class="count-item"><div class="count-num yes" id="cnt-yes">—</div><div class="count-label">Racing</div></div>
+          <div class="count-item"><div class="count-num maybe" id="cnt-maybe">—</div><div class="count-label">Maybe</div></div>
+          <div class="count-item"><div class="count-num no" id="cnt-no">—</div><div class="count-label">Can't Make It</div></div>
+        </div>`;
+
+      let selectedResponse = null;
+      const roundKey = 'att-r' + roundNum;
+
+      // Restore saved
+      const saved = localStorage.getItem(roundKey);
+      if (saved) {
+        selectedResponse = saved;
+        ['yes','maybe','no'].forEach(v => {
+          document.getElementById('btn-'+v).className = 'res-btn' + (v===saved ? ' active-'+v : '');
+        });
+        document.getElementById('submitBtn').classList.add('show');
+        document.getElementById('statusMsg').textContent = 'Your current response: ' + saved;
+      }
+
+      window.selectResponse = function(val) {
+        selectedResponse = val;
+        ['yes','maybe','no'].forEach(v => {
+          document.getElementById('btn-'+v).className = 'res-btn' + (val===v ? ' active-'+v : '');
+        });
+        document.getElementById('submitBtn').classList.add('show');
+      };
+
+      window.submitResponse = async function() {
+        const driver = document.getElementById('driverSel').value;
+        const msg    = document.getElementById('statusMsg');
+        if (!driver)           { msg.textContent='Please select your name first.'; msg.className='status-msg error'; return; }
+        if (!selectedResponse) { msg.textContent='Please select Yes, Maybe or No.'; msg.className='status-msg error'; return; }
+        msg.textContent='Saving...'; msg.className='status-msg';
+        document.getElementById('submitBtn').disabled = true;
+        try {
+          const id = venue.round.replace(/\s/g,'_') + '__' + driver.replace(/\s/g,'_');
+          await db.collection('attendance').doc(id).set({
+            round: venue.round, roundNum, driver,
+            response: selectedResponse,
+            timestamp: new Date().toISOString()
+          });
+          localStorage.setItem(roundKey, selectedResponse);
+          msg.textContent = '✓ Response saved — ' + driver + ': ' + selectedResponse;
+          msg.className = 'status-msg success';
+          // Send email notification
+          emailjs.send('service_l0bwqcj', 'template_mcy4tts', {
+            driver:    driver,
+            round:     venue.round + ' — ' + venue.name,
+            response:  selectedResponse,
+            timestamp: new Date().toLocaleString('en-AU', {timeZone:'Australia/Melbourne'})
+          }).catch(err => console.warn('EmailJS:', err));
+        } catch(e) {
+          msg.textContent = 'Error saving — check connection and try again.';
+          msg.className = 'status-msg error';
+          console.error(e);
+        }
+        document.getElementById('submitBtn').disabled = false;
+      };
+
+      // Live counts
+      db.collection('attendance').where('roundNum','==',roundNum)
+        .onSnapshot(snap => {
+          const c = {yes:0,maybe:0,no:0};
+          snap.forEach(d => { const r=d.data().response; if(c[r]!==undefined) c[r]++; });
+          document.getElementById('cnt-yes').textContent   = c.yes;
+          document.getElementById('cnt-maybe').textContent = c.maybe;
+          document.getElementById('cnt-no').textContent    = c.no;
+        });
+    }
+  }
+</script>
+</body>
+</html>

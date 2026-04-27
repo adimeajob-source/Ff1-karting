@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FF1 Admin</title>
+<style>
+:root{--red:#E8002D;--bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--border:#2a2a2a;--text:#f0f0f0;--muted:#666;--green:#2ecc71;--yellow:#f1c40f;--mono:'Courier New',monospace;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;font-size:14px;}
+body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(232,0,45,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(232,0,45,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+
+/* Lock screen */
+#lockScreen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
+.lock-logo{font-size:2rem;font-weight:900;letter-spacing:0.05em;color:var(--text);}
+.lock-logo span{color:var(--red);}
+.lock-sub{font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.2em;}
+.pin-input{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:0.8rem 1.2rem;font-size:1.5rem;letter-spacing:0.5em;width:180px;text-align:center;font-family:var(--mono);}
+.pin-input:focus{outline:1px solid var(--red);}
+.lock-btn{background:var(--red);color:white;border:none;padding:0.8rem 2rem;font-size:1rem;font-weight:700;cursor:pointer;letter-spacing:0.1em;width:180px;}
+.lock-err{font-family:var(--mono);font-size:0.75rem;color:var(--red);min-height:1em;}
+
+/* Main layout */
+#app{display:none;position:relative;z-index:1;}
+.top-bar{position:sticky;top:0;z-index:10;background:rgba(10,10,10,0.95);border-bottom:2px solid var(--red);display:flex;align-items:center;padding:0 1rem;height:52px;gap:1rem;backdrop-filter:blur(8px);}
+.top-logo{font-weight:900;font-size:1.1rem;letter-spacing:0.05em;}
+.top-logo span{color:var(--red);}
+.top-badge{font-family:var(--mono);font-size:0.6rem;background:var(--red);color:white;padding:2px 6px;letter-spacing:0.1em;}
+.top-logout{margin-left:auto;font-family:var(--mono);font-size:0.65rem;color:var(--muted);cursor:pointer;background:none;border:none;}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto;padding:0 1rem;}
+.tab{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.1em;padding:0.8rem 1rem;cursor:pointer;color:var(--muted);border:none;background:none;white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.15s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--red);border-bottom-color:var(--red);}
+
+/* Panels */
+.panel{display:none;padding:1.5rem;max-width:700px;margin:0 auto;}
+.panel.active{display:block;}
+.panel-title{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);display:flex;align-items:center;gap:0.5rem;}
+.panel-title::before{content:'';display:block;width:3px;height:1.1rem;background:var(--red);}
+
+/* Form elements */
+.field{margin-bottom:1rem;}
+.field label{display:block;font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:0.6rem 0.8rem;font-size:0.95rem;font-family:inherit;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:1px solid var(--red);}
+.field textarea{min-height:80px;resize:vertical;}
+.field select option{background:var(--bg2);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.8rem;}
+
+/* Buttons */
+.btn{padding:0.65rem 1.4rem;font-weight:700;font-size:0.9rem;cursor:pointer;border:none;letter-spacing:0.08em;transition:all 0.15s;}
+.btn-red{background:var(--red);color:white;}
+.btn-red:hover{background:#c4002a;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-outline:hover{border-color:var(--text);color:var(--text);}
+.btn-green{background:#1a4a2a;border:1px solid var(--green);color:var(--green);}
+.btn-row{display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;}
+
+/* Status */
+.status{font-family:var(--mono);font-size:0.72rem;padding:0.6rem 0.8rem;margin-top:0.8rem;display:none;}
+.status.ok{background:#0a2e18;border:1px solid var(--green);color:var(--green);}
+.status.err{background:#2e0a0a;border:1px solid var(--red);color:var(--red);}
+.status.info{background:#1a1a00;border:1px solid var(--yellow);color:var(--yellow);}
+
+/* Section divider */
+.section-div{border:none;border-top:1px solid var(--border);margin:1.5rem 0;}
+.section-label{font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.8rem;}
+
+/* Results grid */
+.results-grid{display:grid;gap:0.4rem;}
+.result-row{display:grid;grid-template-columns:30px 1fr 100px 80px;gap:0.5rem;align-items:center;}
+.result-pos{font-family:var(--mono);font-size:0.8rem;color:var(--muted);text-align:center;}
+.lap-grid{display:grid;gap:0.3rem;margin-top:0.5rem;}
+.lap-row{display:grid;grid-template-columns:1fr 100px;gap:0.5rem;align-items:center;}
+.lap-name{font-size:0.85rem;color:var(--muted);}
+
+/* News card preview */
+.news-preview{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--red);padding:0.8rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;}
+.news-preview-text{flex:1;}
+.news-preview-title{font-weight:700;font-size:0.9rem;}
+.news-preview-date{font-family:var(--mono);font-size:0.65rem;color:var(--muted);}
+.news-preview-del{background:none;border:1px solid #333;color:var(--muted);padding:3px 8px;cursor:pointer;font-size:0.75rem;}
+.news-preview-del:hover{border-color:var(--red);color:var(--red);}
+
+/* Notification */
+.notif-types{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;}
+.notif-type{padding:0.8rem;background:var(--bg2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all 0.15s;}
+.notif-type:hover,.notif-type.active{border-color:var(--red);background:#1a0a0a;}
+.notif-type-icon{font-size:1.5rem;margin-bottom:0.3rem;}
+.notif-type-label{font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;}
+
+@media(max-width:500px){
+  .field-row,.field-row-3{grid-template-columns:1fr;}
+  .result-row{grid-template-columns:25px 1fr 80px;}
+  .panel{padding:1rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- Lock screen -->
+<div id="lockScreen">
+  <div class="lock-logo">FF<span>1</span></div>
+  <div class="lock-sub">// ADMIN ACCESS</div>
+  <input class="pin-input" type="password" id="pinInput" placeholder="••••" maxlength="6"
+    onkeydown="if(event.key==='Enter')checkPin()">
+  <button class="lock-btn" onclick="checkPin()">ENTER</button>
+  <div class="lock-err" id="pinErr"></div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+  <div class="top-bar">
+    <div class="top-logo">FF<span>1</span></div>
+    <div class="top-badge">ADMIN</div>
+    <button class="top-logout" onclick="logout()">LOGOUT</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('results')">📋 Results</button>
+    <button class="tab" onclick="switchTab('schedule')">📅 Schedule</button>
+    <button class="tab" onclick="switchTab('news')">📰 News</button>
+    <button class="tab" onclick="switchTab('ticker')">📢 Ticker</button>
+    <button class="tab" onclick="switchTab('notify')">🔔 Notify</button>
+    <button class="tab" onclick="switchTab('pdf')">📄 PDF</button>
+    <button class="tab" onclick="switchTab('attendance')">👥 Attendance</button>
+    <button class="tab" onclick="switchTab('pdf')">📄 PDF</button>
+    <button class="tab" onclick="switchTab('attendance')">👥 Attendance</button>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div class="panel active" id="panel-results">
+    <div class="panel-title">Race Results</div>
+
+    <div class="field">
+      <label>Round</label>
+      <select id="res-round" onchange="loadResultsForRound()">
+        <option value="">Select round...</option>
+        <option value="1">Round 1 — Albion</option>
+        <option value="2">Round 2 — Dandenong South</option>
+        <option value="3">Round 3 — Campbellfield</option>
+        <option value="4">Round 4 — Thomastown</option>
+        <option value="5">Round 5 — Moorabbin</option>
+        <option value="6">Round 6 — Bayswater</option>
+        <option value="7">Round 7 — West Footscray</option>
+        <option value="8">Round 8 — Braybrook</option>
+        <option value="9">Round 9 — Port Melbourne</option>
+        <option value="10">Round 10 — Dandenong South</option>
+        <option value="11">Round 11 — Braybrook</option>
+      </select>
+    </div>
+
+    <div class="section-label">Finishing Order</div>
+    <div class="results-grid" id="resultsGrid">
+      <!-- Generated by JS -->
+    </div>
+
+    <hr class="section-div">
+    <div class="section-label">Lap Times (seconds, e.g. 35.294)</div>
+    <div class="lap-grid" id="lapGrid">
+      <!-- Generated by JS -->
+    </div>
+
+    <hr class="section-div">
+    <div class="field-row">
+      <div class="field">
+        <label>Fastest Lap Driver</label>
+        <select id="res-fl"><option value="">— None —</option></select>
+      </div>
+      <div class="field">
+        <label>Fastest Lap Time</label>
+        <input type="text" id="res-fl-time" placeholder="35.294">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Fastest Practice Driver</label>
+        <select id="res-fp"><option value="">— None —</option></select>
+      </div>
+      <div class="field">
+        <label>Fastest Practice Time</label>
+        <input type="text" id="res-fp-time" placeholder="34.768">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-red" onclick="saveResults()">Save Results</button>
+      <button class="btn btn-outline" onclick="clearResultsForm()">Clear</button>
+    </div>
+    <div class="status" id="res-status"></div>
+  </div>
+
+  <!-- ── SCHEDULE ── -->
+  <div class="panel" id="panel-schedule">
+    <div class="panel-title">Schedule Editor</div>
+
+    <div class="field">
+      <label>Round</label>
+      <select id="sch-round" onchange="loadScheduleForRound()">
+        <option value="">Select round...</option>
+        <option value="1">Round 1 — Albion</option>
+        <option value="2">Round 2 — Dandenong South</option>
+        <option value="3">Round 3 — Campbellfield</option>
+        <option value="4">Round 4 — Thomastown</option>
+        <option value="5">Round 5 — Moorabbin</option>
+        <option value="6">Round 6 — Bayswater</option>
+        <option value="7">Round 7 — West Footscray</option>
+        <option value="8">Round 8 — Braybrook</option>
+        <option value="9">Round 9 — Port Melbourne</option>
+        <option value="10">Round 10 — Dandenong South</option>
+        <option value="11">Round 11 — Braybrook</option>
+        <option value="12">Special — Phillip Island</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Date Display (e.g. 9–10 May 2026)</label>
+        <input type="text" id="sch-date" placeholder="9–10 May 2026">
+      </div>
+      <div class="field">
+        <label>Arrival Time (e.g. 9:00am)</label>
+        <input type="text" id="sch-arrive" placeholder="9:00am">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Cost (e.g. $69)</label>
+        <input type="text" id="sch-cost" placeholder="$69">
+      </div>
+      <div class="field">
+        <label>Register URL</label>
+        <input type="text" id="sch-register" placeholder="attend.html?round=3">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-red" onclick="saveSchedule()">Save Schedule</button>
+    </div>
+    <div class="status" id="sch-status"></div>
+  </div>
+
+  <!-- ── NEWS ── -->
+  <div class="panel" id="panel-news">
+    <div class="panel-title">News Manager</div>
+
+    <div class="section-label">Add New Post</div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="news-title" placeholder="Round 3 — Complete">
+    </div>
+    <div class="field">
+      <label>Body</label>
+      <textarea id="news-body" placeholder="Clem takes victory at Campbellfield..."></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Date (e.g. 10 May 2026)</label>
+        <input type="text" id="news-date" placeholder="10 May 2026">
+      </div>
+      <div class="field">
+        <label>Link URL (optional)</label>
+        <input type="text" id="news-link" placeholder="https://...">
+      </div>
+    </div>
+    <div class="field">
+      <label>Link Text (optional)</label>
+      <input type="text" id="news-link-text" placeholder="View Results">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-red" onclick="addNews()">Add Post</button>
+    </div>
+    <div class="status" id="news-status"></div>
+
+    <hr class="section-div">
+    <div class="section-label">Existing Posts (newest first)</div>
+    <div id="newsList"></div>
+  </div>
+
+  <!-- ── TICKER ── -->
+  <div class="panel" id="panel-ticker">
+    <div class="panel-title">Ticker Editor</div>
+    <p style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;">
+      Separate each ticker item with a pipe character <strong style="color:var(--text)">|</strong><br>
+      e.g. <em style="color:var(--muted)">Round 2 Complete — Ky wins | Championship Leader: Clem | Round 3 Registration Open</em>
+    </p>
+    <div class="field">
+      <label>Ticker Text</label>
+      <textarea id="ticker-text" style="min-height:120px;" placeholder="Item 1 | Item 2 | Item 3"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-red" onclick="saveTicker()">Save Ticker</button>
+      <button class="btn btn-outline" onclick="loadCurrentTicker()">Load Current</button>
+    </div>
+    <div class="status" id="ticker-status"></div>
+  </div>
+
+  <!-- ── NOTIFY ── -->
+  <div class="panel" id="panel-notify">
+    <div class="panel-title">Push Notifications</div>
+    <p style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;">
+      Send a push notification to all drivers who have installed the FF1 app.
+    </p>
+
+    <div class="section-label">Quick Templates</div>
+    <div class="notif-types">
+      <div class="notif-type" onclick="fillTemplate('register')">
+        <div class="notif-type-icon">⚑</div>
+        <div class="notif-type-label">REGISTRATION OPEN</div>
+      </div>
+      <div class="notif-type" onclick="fillTemplate('results')">
+        <div class="notif-type-icon">🏁</div>
+        <div class="notif-type-label">RESULTS IN</div>
+      </div>
+      <div class="notif-type" onclick="fillTemplate('raceday')">
+        <div class="notif-type-icon">🏎️</div>
+        <div class="notif-type-label">RACE DAY TOMORROW</div>
+      </div>
+      <div class="notif-type" onclick="fillTemplate('news')">
+        <div class="notif-type-icon">📢</div>
+        <div class="notif-type-label">GENERAL NEWS</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="notif-title" placeholder="FF1 — Round 3 Results">
+    </div>
+    <div class="field">
+      <label>Message</label>
+      <textarea id="notif-body" placeholder="Clem takes the win at Campbellfield. Check the standings!" style="min-height:80px;"></textarea>
+    </div>
+    <div class="field">
+      <label>Link (optional — where tapping the notification goes)</label>
+      <input type="text" id="notif-url" placeholder="https://yoursite.netlify.app/#results">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-red" onclick="sendNotification()">Send Notification</button>
+    </div>
+    <div class="status" id="notif-status"></div>
+    <div style="font-family:var(--mono);font-size:0.65rem;color:#555;margin-top:1rem;line-height:1.8;">
+      Uses FCM V1 API with service account auth. No server key needed.<br>
+      Drivers must install the app and allow notifications to receive pushes.
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ── Config ──
+const ADMIN_PIN = '1234'; // Change this to your PIN
+
+const DRIVERS = ['Alan','Chris','Clem','Daniel','David N','David R','Euge','Gavin',
+  'James','Kosta','Ky','Matt C','Matt S','May','Michael','Peter',
+  'Pip','Rian','Richard','Rob','Tim'];
+
+// ── Firebase ──
+firebase.initializeApp({
+  apiKey: "AIzaSyAm0yRhM9Dsz2njjC9-qoVzQG78PtPIJRc",
+  authDomain: "fatfurious1-343e2.firebaseapp.com",
+  projectId: "fatfurious1-343e2",
+  storageBucket: "fatfurious1-343e2.firebasestorage.app",
+  messagingSenderId: "159080678325",
+  appId: "1:159080678325:web:6855e08dac86b588ae4ffc"
+});
+const db = firebase.firestore();
+
+// ── Auth ──
+function checkPin(){
+  const pin = document.getElementById('pinInput').value;
+  if(pin === ADMIN_PIN){
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    sessionStorage.setItem('ff1admin','1');
+    initApp();
+  } else {
+    document.getElementById('pinErr').textContent = 'Incorrect PIN';
+    document.getElementById('pinInput').value='';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('ff1admin');
+  location.reload();
+}
+// Auto-unlock if already authenticated this session
+if(sessionStorage.getItem('ff1admin')==='1'){
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  setTimeout(initApp,100);
+}
+
+// ── Tabs ──
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='news') loadNewsList();
+  if(tab==='ticker') loadCurrentTicker();
+}
+
+// ── Init ──
+function initApp(){
+  buildResultsGrid();
+  buildLapGrid();
+  buildDriverSelects();
+}
+
+function buildDriverSelects(){
+  const opts = DRIVERS.map(d=>`<option value="${d}">${d}</option>`).join('');
+  ['res-fl','res-fp'].forEach(id=>{
+    document.getElementById(id).innerHTML='<option value="">— None —</option>'+opts;
+  });
+}
+
+// ── RESULTS ──
+function buildResultsGrid(){
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = Array.from({length:12},(_,i)=>`
+    <div class="result-row">
+      <div class="result-pos">${i+1}</div>
+      <select id="pos-${i+1}" style="background:#111;border:1px solid #2a2a2a;color:#f0f0f0;padding:0.4rem;width:100%;">
+        <option value="">—</option>
+        ${DRIVERS.map(d=>`<option value="${d}">${d}</option>`).join('')}
+      </select>
+      <input type="text" id="lap-inline-${i+1}" placeholder="lap time" style="background:#111;border:1px solid #2a2a2a;color:#f0f0f0;padding:0.4rem;font-size:0.85rem;">
+    </div>`).join('');
+}
+
+function buildLapGrid(){
+  // Lap times are inline in results grid now
+}
+
+async function loadResultsForRound(){
+  const rn = parseInt(document.getElementById('res-round').value);
+  if(!rn) return;
+  try {
+    const doc = await db.collection('rounds').doc(`round-${rn}`).get();
+    if(!doc.exists) return;
+    const data = doc.data();
+    // Fill finishing order
+    if(data.results){
+      data.results.forEach((driver,i)=>{
+        const sel = document.getElementById(`pos-${i+1}`);
+        if(sel) sel.value = driver;
+      });
+    }
+    // Fill inline lap times
+    if(data.lapTimes){
+      Object.entries(data.lapTimes).forEach(([driver,time])=>{
+        // Find which position this driver is in
+        for(let i=1;i<=12;i++){
+          const sel = document.getElementById(`pos-${i}`);
+          if(sel && sel.value===driver){
+            const inp = document.getElementById(`lap-inline-${i}`);
+            if(inp) inp.value = time;
+          }
+        }
+      });
+    }
+    if(data.fastestLap)     document.getElementById('res-fl').value = data.fastestLap;
+    if(data.fastestLapTime) document.getElementById('res-fl-time').value = data.fastestLapTime;
+    if(data.fastestPrac)    document.getElementById('res-fp').value = data.fastestPrac;
+    if(data.fastestPracTime)document.getElementById('res-fp-time').value = data.fastestPracTime;
+  } catch(e){ console.error(e); }
+}
+
+async function saveResults(){
+  const rn = parseInt(document.getElementById('res-round').value);
+  if(!rn){ showStatus('res-status','Select a round first','err'); return; }
+
+  // Collect finishing order
+  const results=[];
+  for(let i=1;i<=12;i++){
+    const v = document.getElementById(`pos-${i}`)?.value;
+    if(v) results.push(v);
+  }
+
+  // Collect lap times from inline inputs
+  const lapTimes={};
+  for(let i=1;i<=12;i++){
+    const driver = document.getElementById(`pos-${i}`)?.value;
+    const time   = document.getElementById(`lap-inline-${i}`)?.value;
+    if(driver && time) lapTimes[driver] = parseFloat(time);
+  }
+
+  const payload = {
+    roundNum: rn,
+    results,
+    lapTimes,
+    fastestLap:      document.getElementById('res-fl').value,
+    fastestLapTime:  document.getElementById('res-fl-time').value,
+    fastestPrac:     document.getElementById('res-fp').value,
+    fastestPracTime: document.getElementById('res-fp-time').value,
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    showStatus('res-status','Saving...','info');
+    await db.collection('rounds').doc(`round-${rn}`).set(payload, {merge:true});
+    showStatus('res-status',`✓ Round ${rn} results saved successfully`,'ok');
+  } catch(e){
+    showStatus('res-status','Error: '+e.message,'err');
+  }
+}
+
+function clearResultsForm(){
+  for(let i=1;i<=12;i++){
+    const sel=document.getElementById(`pos-${i}`);
+    const inp=document.getElementById(`lap-inline-${i}`);
+    if(sel) sel.value='';
+    if(inp) inp.value='';
+  }
+  document.getElementById('res-fl').value='';
+  document.getElementById('res-fl-time').value='';
+  document.getElementById('res-fp').value='';
+  document.getElementById('res-fp-time').value='';
+}
+
+// ── SCHEDULE ──
+async function loadScheduleForRound(){
+  const rn = parseInt(document.getElementById('sch-round').value);
+  if(!rn) return;
+  try {
+    const doc = await db.collection('rounds').doc(`round-${rn}`).get();
+    if(!doc.exists) return;
+    const d = doc.data();
+    if(d.date)        document.getElementById('sch-date').value    = d.date;
+    if(d.arrive)      document.getElementById('sch-arrive').value  = d.arrive;
+    if(d.cost)        document.getElementById('sch-cost').value    = d.cost;
+    if(d.registerUrl) document.getElementById('sch-register').value= d.registerUrl;
+  } catch(e){ console.error(e); }
+}
+
+async function saveSchedule(){
+  const rn = parseInt(document.getElementById('sch-round').value);
+  if(!rn){ showStatus('sch-status','Select a round first','err'); return; }
+  const payload={
+    roundNum:    rn,
+    date:        document.getElementById('sch-date').value,
+    arrive:      document.getElementById('sch-arrive').value,
+    cost:        document.getElementById('sch-cost').value,
+    registerUrl: document.getElementById('sch-register').value,
+    updatedAt:   new Date().toISOString()
+  };
+  try {
+    showStatus('sch-status','Saving...','info');
+    await db.collection('rounds').doc(`round-${rn}`).set(payload, {merge:true});
+    showStatus('sch-status','✓ Schedule updated successfully','ok');
+  } catch(e){ showStatus('sch-status','Error: '+e.message,'err'); }
+}
+
+// ── NEWS ──
+async function addNews(){
+  const title = document.getElementById('news-title').value.trim();
+  const body  = document.getElementById('news-body').value.trim();
+  const date  = document.getElementById('news-date').value.trim();
+  if(!title||!body){ showStatus('news-status','Title and body are required','err'); return; }
+  const payload={
+    title, body, date,
+    link:     document.getElementById('news-link').value.trim(),
+    linkText: document.getElementById('news-link-text').value.trim(),
+    timestamp: Date.now(),
+    pinned: false
+  };
+  try {
+    showStatus('news-status','Saving...','info');
+    await db.collection('news').add(payload);
+    showStatus('news-status','✓ News post added','ok');
+    // Clear form
+    ['news-title','news-body','news-date','news-link','news-link-text'].forEach(id=>{
+      document.getElementById(id).value='';
+    });
+    loadNewsList();
+  } catch(e){ showStatus('news-status','Error: '+e.message,'err'); }
+}
+
+async function loadNewsList(){
+  const list = document.getElementById('newsList');
+  list.innerHTML='<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);">Loading...</div>';
+  try {
+    const snap = await db.collection('news').orderBy('timestamp','desc').get();
+    if(snap.empty){ list.innerHTML='<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);">No posts yet</div>'; return; }
+    list.innerHTML = '';
+    snap.forEach(doc=>{
+      const d=doc.data();
+      const el=document.createElement('div');
+      el.className='news-preview';
+      el.innerHTML=`
+        <div class="news-preview-text">
+          <div class="news-preview-title">${d.title}</div>
+          <div class="news-preview-date">${d.date||''}</div>
+        </div>
+        <button class="news-preview-del" onclick="deleteNews('${doc.id}')">Delete</button>`;
+      list.appendChild(el);
+    });
+  } catch(e){ list.innerHTML='<div style="color:var(--red);">Error loading posts</div>'; }
+}
+
+async function deleteNews(id){
+  if(!confirm('Delete this news post?')) return;
+  try {
+    await db.collection('news').doc(id).delete();
+    loadNewsList();
+    showStatus('news-status','✓ Post deleted','ok');
+  } catch(e){ showStatus('news-status','Error: '+e.message,'err'); }
+}
+
+// ── TICKER ──
+async function loadCurrentTicker(){
+  try {
+    const doc = await db.collection('config').doc('ticker').get();
+    if(doc.exists) document.getElementById('ticker-text').value = doc.data().text||'';
+  } catch(e){ console.error(e); }
+}
+
+async function saveTicker(){
+  const text = document.getElementById('ticker-text').value.trim();
+  if(!text){ showStatus('ticker-status','Enter some ticker text','err'); return; }
+  try {
+    showStatus('ticker-status','Saving...','info');
+    await db.collection('config').doc('ticker').set({text, updatedAt:new Date().toISOString()});
+    showStatus('ticker-status','✓ Ticker updated — live on site immediately','ok');
+  } catch(e){ showStatus('ticker-status','Error: '+e.message,'err'); }
+}
+
+// ── NOTIFICATIONS ──
+const TEMPLATES={
+  register:{title:'⚑ FF1 — Registration Open',body:'Registration for the next round is now open. Secure your spot!'},
+  results: {title:'🏁 FF1 — Results In',body:'Check the latest race results and updated standings.'},
+  raceday: {title:'🏎️ FF1 — Race Day Tomorrow',body:"Don't forget — race day is tomorrow. See you on track!"},
+  news:    {title:'📢 FF1 — Update',body:'New update from FF1 Karting League.'}
+};
+function fillTemplate(type){
+  document.querySelectorAll('.notif-type').forEach(el=>el.classList.remove('active'));
+  event.target.closest('.notif-type').classList.add('active');
+  const t=TEMPLATES[type];
+  document.getElementById('notif-title').value=t.title;
+  document.getElementById('notif-body').value=t.body;
+}
+// ── FCM V1 sender ──
+// Uses service account JWT to get OAuth2 token, then calls FCM V1 API
+const SA_EMAIL='firebase-adminsdk-fbsvc@fatfurious1-343e2.iam.gserviceaccount.com';
+const PROJECT_ID='fatfurious1-343e2';
+
+// Private key stored split to avoid CSP issues
+const SA_KEY_PARTS=[
+  'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDgeD0OxE+yCLDM',
+  'Qh/fE/QM8/gm2Dmb6Efwcaa77vERXhxiJXytVcS7jaioKAYYcIe5w+jMgOgTTEZW',
+  'oDeVRbA7lA3p74xA3YhBKPLroNojFc3RFacaL2sDSk9YAOXKNQWExgEatJkCMOX+',
+  'wQBFuz5czNbw+f3MRLjCHOK5uHd2/y2i/PjxwfgUaAcRBeeqFzQuHGalReGvuI3j',
+  'a6oS5ztgtQbGJuUmDMmevUbn9oOXUGpydj1PFI/j7PIftVvbZOsg7oHFVhA5f3ko',
+  'SI5E7NjoHde3/OiwfunL+duLHSweev/wx+WmC9VoB/ZSw97cjrvgpTv0PQlj8+WB',
+  '8fY5uPtVAgMBAAECggEAGk0cYmGQMP0hsh1BXMMawnXHqs2FGoaB/2NhtP2PU4ii',
+  'bMGVtT2qeotjqqhd5nkw/gw9d9DW4IP8beQB/0SWHLUBWFrQJT2P3Iquw/sp9Bh2',
+  '8DvIQ6IwuMb5OweH5USHLAKDWJy2nPIb0NjObl09NmRt/vhby5Z1y5DU5AwAO3n8',
+  'm0R4aMkCidhas0ZE2eYqKgWUUn5G607LYMnWsfN4bzJEOclwa7qsYNbAgF8EyJLj',
+  'NvK+QPHFG8liRsGM9sHfRSUbF5W7anbmCjCUAzIiaQkdWNjIPC3BlMReKp6x3Zx/',
+  'oH+hL7DDySOyRgJ5lP1we4tvlzBd+6dVyqvLo+k+wQKBgQD90ya/BIpqybV1uJZm',
+  'NgY6d8lmBscpJa66GsasO4o00qMtiEEWocZ3Zi93CqvD7goMuFX7q557UQdTWfIj',
+  'SUZj+jupyhdm6OTn3KTYEy6UWe1iRs2E5wkuLPP5wBOO7fle/GSEikxKgodOLNPn',
+  'CyXXAINN8AFNDen5rhreJ3HIxQKBgQDiZK/dihcR+wYpE9xqaVS/ssyKRJi+a6Tb',
+  'ocyDkNC6UqN8oMFLhwFXibGJ4nEmBX9ygHyPyt2XkoOJ5gGBTaYtkoAHdu7zc4f7',
+  'TmtUuPS4qjVyV8+TGCuhmbDOdSoRmCyknzOvAgNebV7wTPvzKydvujr2OuiV9rc6',
+  'mq4Lg0vxUQKBgQDqEo/3teND6XHq9ufTqFyEDLVw3i1KF9MTEuBGMr4YSmtq8O09',
+  'RsD0mQqKmA+gpuMjqda5OSH0jNvZlOgEfG1qg3gD8zczkvCNld961+2rp2aPq8WZ',
+  'm0nPCGuR1Pz0YScH3m9//t2uFMNcZ2Ce/5vMs09jT0KT4ZH0zAdA+VUoFQKBgDJM',
+  'zqo5QTD0hgTgbcuSxYqmDj32Sb2dKw7FXywoI8gSDlLlYK0IPOsXI8QP9LXO6Ocm',
+  '1wYXu64ull0wJkt1ViOv9hQyf5rFo4PZg41aXr0czC0wh2UWLLOF8zub2pH4LosQ',
+  '+Cm9F8SGJl7bq+r2PpfbV7hXlE+ldkZmEZ9rN5dRAoGBALdqtoDZX72A7nNg4/6D',
+  'YkbkBakP66fiU56Ync/RdH7d1iN4HZfvN4gbgpx7EVp7OVI8f5s+zIqlmp0jGH3',
+  'WK9Ag8I6xD8CXQqnRxCL8gPvh+x/PK70azk2QcIRNMkGeCJzJ9PiVJh4xeov3NY/',
+  'rtdw6Dxr7AHNvh4n/vl2UJky'
+];
+
+async function getOAuthToken(){
+  // Build JWT for service account
+  const now=Math.floor(Date.now()/1000);
+  const header=btoa(JSON.stringify({alg:'RS256',typ:'JWT'}))
+    .replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const claim=btoa(JSON.stringify({
+    iss:SA_EMAIL,
+    scope:'https://www.googleapis.com/auth/firebase.messaging',
+    aud:'https://oauth2.googleapis.com/token',
+    iat:now, exp:now+3600
+  })).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+
+  // Import private key
+  const pemKey='-----BEGIN PRIVATE KEY-----\n'+SA_KEY_PARTS.join('\n')+'\n-----END PRIVATE KEY-----';
+  const keyData=pemKey.replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+  const binaryKey=Uint8Array.from(atob(keyData),c=>c.charCodeAt(0));
+  const cryptoKey=await crypto.subtle.importKey(
+    'pkcs8',binaryKey,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']
+  );
+
+  // Sign JWT
+  const sigInput=new TextEncoder().encode(header+'.'+claim);
+  const sig=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',cryptoKey,sigInput);
+  const sigB64=btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const jwt=header+'.'+claim+'.'+sigB64;
+
+  // Exchange JWT for access token
+  const res=await fetch('https://oauth2.googleapis.com/token',{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion='+jwt
+  });
+  const data=await res.json();
+  if(!data.access_token) throw new Error('Token error: '+JSON.stringify(data));
+  return data.access_token;
+}
+
+async function sendNotification(){
+  const title=document.getElementById('notif-title').value.trim();
+  const body=document.getElementById('notif-body').value.trim();
+  const url=document.getElementById('notif-url').value.trim()||'/';
+  if(!title||!body){showStatus('notif-status','Title and message required','err');return;}
+
+  showStatus('notif-status','Getting auth token...','info');
+  try {
+    const accessToken=await getOAuthToken();
+    showStatus('notif-status','Fetching devices...','info');
+
+    const snap=await db.collection('fcm_tokens').get();
+    if(snap.empty){
+      showStatus('notif-status','No devices registered yet — drivers need to install the app and allow notifications','info');
+      return;
+    }
+
+    const tokens=[];
+    snap.forEach(d=>{ if(d.data().token) tokens.push(d.data().token); });
+    showStatus('notif-status','Sending to '+tokens.length+' device(s)...','info');
+
+    let sent=0,failed=0;
+    for(const token of tokens){
+      try {
+        const res=await fetch(
+          'https://fcm.googleapis.com/v1/projects/'+PROJECT_ID+'/messages:send',{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Authorization':'Bearer '+accessToken
+          },
+          body:JSON.stringify({
+            message:{
+              token,
+              notification:{title,body},
+              webpush:{
+                notification:{
+                  title,body,
+                  icon:'icon-192.png',
+                  badge:'icon-32.png',
+                  vibrate:[200,100,200]
+                },
+                fcm_options:{link:url}
+              },
+              data:{url,title,body}
+            }
+          })
+        });
+        const result=await res.json();
+        if(res.ok) sent++;
+        else{failed++;console.warn('FCM fail:',result);}
+      } catch(e){failed++;console.error(e);}
+    }
+
+    await db.collection('notifications').add({
+      title,body,url,timestamp:Date.now(),
+      sent:true,sentCount:sent,failedCount:failed
+    });
+
+    showStatus('notif-status',
+      sent>0?'✓ Sent to '+sent+' device(s)'+(failed?' ('+failed+' failed)':'')
+            :'Failed — check console for details',
+      sent>0?'ok':'err');
+
+  } catch(e){
+    showStatus('notif-status','Error: '+e.message,'err');
+    console.error(e);
+  }
+}
+
+// ── Utils ──
+function showStatus(id,msg,type){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.className='status '+type; el.style.display='block';
+  if(type==='ok') setTimeout(()=>el.style.display='none',4000);
+}
+
+// ── PDF/Text Parser ──
+let parsedResults = null;
+
+async function parsePDF(input){
+  const file = input.files[0];
+  if(!file) return;
+  showStatus('pdf-parse-status','Reading file...','info');
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  try {
+    if(ext==='csv'||ext==='txt'){
+      const text = await file.text();
+      parseResultsText(text);
+    } else if(ext==='pdf'){
+      // For PDF: use FileReader to get text content
+      // Basic PDF text extraction — works for text-based PDFs
+      const reader = new FileReader();
+      reader.onload = e=>{
+        try {
+          // Extract readable text from PDF binary
+          const text = extractPDFText(e.target.result);
+          parseResultsText(text);
+        } catch(err){
+          showStatus('pdf-parse-status','Could not read PDF — try copying and pasting text instead','err');
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
+  } catch(e){
+    showStatus('pdf-parse-status','Error reading file: '+e.message,'err');
+  }
+}
+
+function extractPDFText(binary){
+  // Extract text streams from PDF binary
+  const matches = binary.match(/BT[\s\S]*?ET/g)||[];
+  let text = '';
+  matches.forEach(m=>{
+    const tjs = m.match(/\(([^)]+)\)Tj/g)||[];
+    tjs.forEach(tj=>{ text += tj.replace(/\(|\)Tj/g,'')+'
+'; });
+  });
+  return text || binary.replace(/[^ -~
+]/g,' ');
+}
+
+const ALL_DRIVERS = ['Alan','Chris','Clem','Daniel','David N','David R','Euge','Gavin',
+  'James','Kosta','Ky','Matt C','Matt S','May','Michael','Peter',
+  'Pip','Rian','Richard','Rob','Tim'];
+
+function parseResultsText(text){
+  // Try to find drivers and lap times in text
+  const lines = text.split(/
+|\r/).map(l=>l.trim()).filter(Boolean);
+  const found = [];
+  const lapTimes = {};
+
+  lines.forEach(line=>{
+    // Check if line contains a driver name
+    const driver = ALL_DRIVERS.find(d=>
+      line.toLowerCase().includes(d.toLowerCase())
+    );
+    if(driver && !found.includes(driver)){
+      found.push(driver);
+      // Look for a time pattern (e.g. 35.294 or 1:35.294)
+      const timeMatch = line.match(/(\d{1,2}[:.]?\d{2}\.\d{3})/);
+      if(timeMatch){
+        // Normalise to seconds
+        const raw = timeMatch[1];
+        if(raw.includes(':')){
+          const [mins,secs]=raw.split(':');
+          lapTimes[driver]=(parseInt(mins)*60+parseFloat(secs)).toFixed(3);
+        } else {
+          lapTimes[driver]=parseFloat(raw).toFixed(3);
+        }
+      }
+    }
+  });
+
+  if(!found.length){
+    showStatus('pdf-parse-status','No drivers found — try a .txt or .csv file, or paste text manually','err');
+    return;
+  }
+
+  parsedResults = {results:found, lapTimes};
+
+  // Show preview
+  const preview = document.getElementById('pdf-extracted');
+  preview.innerHTML = found.map((d,i)=>{
+    const t=lapTimes[d]||'—';
+    return `<div style="padding:3px 0;border-bottom:1px solid #1a1a1a;">${i+1}. <strong>${d}</strong> ${t!=='—'?'<span style="color:#666">'+t+'s</span>':''}
+      <select onchange="updateParsedDriver(${i},this.value)" style="background:#1a1a1a;border:1px solid #333;color:#f0f0f0;padding:2px;margin-left:6px;font-size:0.8rem;">
+        <option value="${d}">${d}</option>
+        ${ALL_DRIVERS.filter(x=>x!==d).map(x=>`<option value="${x}">${x}</option>`).join('')}
+      </select></div>`;
+  }).join('');
+
+  document.getElementById('pdf-preview').style.display='block';
+  showStatus('pdf-parse-status',`Found ${found.length} drivers. Review and correct if needed, then confirm.`,'ok');
+}
+
+function updateParsedDriver(idx, newName){
+  if(parsedResults) parsedResults.results[idx]=newName;
+}
+
+async function confirmPDFResults(){
+  const rn=parseInt(document.getElementById('pdf-round').value);
+  if(!rn){showStatus('pdf-save-status','Select a round first','err');return;}
+  if(!parsedResults){showStatus('pdf-save-status','No results to save','err');return;}
+  try {
+    showStatus('pdf-save-status','Saving...','info');
+    await db.collection('rounds').doc(`round-${rn}`).set({
+      roundNum:rn, ...parsedResults, updatedAt:new Date().toISOString()
+    },{merge:true});
+    showStatus('pdf-save-status',`✓ Round ${rn} results saved from PDF`,'ok');
+    document.getElementById('pdf-preview').style.display='none';
+    parsedResults=null;
+  } catch(e){showStatus('pdf-save-status','Error: '+e.message,'err');}
+}
+
+// ── Attendance Summary ──
+let attUnsubscribe = null;
+
+async function loadAttendanceSummary(){
+  const rn=document.getElementById('att-round-sel').value;
+  if(!rn) return;
+
+  // Find round label
+  const roundLabels={'3':'Round 3','4':'Round 4','5':'Round 5','6':'Round 6',
+    '7':'Round 7','8':'Round 8','9':'Round 9','10':'Round 10','11':'Round 11'};
+  const roundLabel=roundLabels[rn]||`Round ${rn}`;
+
+  if(attUnsubscribe) attUnsubscribe();
+  document.getElementById('att-summary').style.display='block';
+
+  attUnsubscribe = db.collection('attendance')
+    .where('round','==',roundLabel)
+    .onSnapshot(snap=>{
+      const yes=[],maybe=[],no=[];
+      snap.forEach(d=>{
+        const data=d.data();
+        if(data.response==='yes') yes.push(data.driver);
+        else if(data.response==='maybe') maybe.push(data.driver);
+        else if(data.response==='no') no.push(data.driver);
+      });
+
+      document.getElementById('att-yes-count').textContent=yes.length;
+      document.getElementById('att-maybe-count').textContent=maybe.length;
+      document.getElementById('att-no-count').textContent=no.length;
+
+      const tag=(name,col)=>`<span style="background:#1a1a1a;border:1px solid ${col};color:${col};padding:3px 10px;font-family:var(--mono);font-size:0.75rem;">${name}</span>`;
+      document.getElementById('att-yes-list').innerHTML=yes.map(n=>tag(n,'#2ecc71')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444;">None yet</span>';
+      document.getElementById('att-maybe-list').innerHTML=maybe.map(n=>tag(n,'#f1c40f')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444;">None</span>';
+      document.getElementById('att-no-list').innerHTML=no.map(n=>tag(n,'#E8002D')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444;">None</span>';
+
+      // No response
+      const responded=new Set([...yes,...maybe,...no]);
+      const none=ALL_DRIVERS.filter(d=>!responded.has(d));
+      document.getElementById('att-none-list').innerHTML=none.map(n=>tag(n,'#333')).join('');
+    });
+}
+
+function copyAttendanceText(){
+  const rn=document.getElementById('att-round-sel').value;
+  const yes=Array.from(document.getElementById('att-yes-list').querySelectorAll('span')).map(s=>s.textContent).filter(Boolean);
+  const maybe=Array.from(document.getElementById('att-maybe-list').querySelectorAll('span')).map(s=>s.textContent).filter(Boolean);
+  const none=Array.from(document.getElementById('att-none-list').querySelectorAll('span')).map(s=>s.textContent).filter(Boolean);
+  const text=`FF1 Round ${rn} Attendance\n\n✅ Racing (${yes.length}): ${yes.join(', ')||'None'}\n❓ Maybe (${maybe.length}): ${maybe.join(', ')||'None'}\n⏳ No response: ${none.join(', ')||'All responded!'}`;
+  navigator.clipboard.writeText(text).then(()=>{
+    showStatus('att-copy-status','✓ Copied to clipboard','ok');
+  }).catch(()=>showStatus('att-copy-status','Could not copy — try manually','err'));
+}
+</script>
+</body>
+</html>
+
+<script>
+// ── Patch: Add narrative/report fields to Results tab ──
+document.addEventListener('DOMContentLoaded', ()=>{
+  const resPanel = document.getElementById('panel-results');
+  if(!resPanel) return;
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:1.5rem 0;">
+    <div style="font-family:var(--mono);font-size:0.65rem;color:#666;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.8rem;">Race Report</div>
+    <div class="field">
+      <label>Race Narrative (shown at top of results)</label>
+      <textarea id="res-narrative" style="min-height:100px;" placeholder="Ky storms to victory at Campbellfield Powerplay, with a dominant lights-to-flag performance..."></textarea>
+    </div>
+    <div class="field">
+      <label>Additional Report / Notes (optional)</label>
+      <textarea id="res-report" style="min-height:80px;" placeholder="Any additional race notes, incidents, stewards decisions..."></textarea>
+    </div>`;
+  const btnRow = resPanel.querySelector('.btn-row');
+  if(btnRow) resPanel.insertBefore(div, btnRow);
+});
+
+// ── Patch: Load narrative/report in loadResultsForRound ──
+const origLoad = window.loadResultsForRound;
+window.loadResultsForRound = async function(){
+  if(origLoad) await origLoad();
+  const rn = parseInt(document.getElementById('res-round')?.value);
+  if(!rn) return;
+  try {
+    const doc = await db.collection('rounds').doc(`round-${rn}`).get();
+    if(!doc.exists) return;
+    const d = doc.data();
+    if(d.narrative) document.getElementById('res-narrative').value = d.narrative||'';
+    if(d.report)    document.getElementById('res-report').value    = d.report||'';
+  } catch(e){}
+};
+
+// ── Patch: Include narrative/report in saveResults ──
+const origSave = window.saveResults;
+window.saveResults = async function(){
+  const rn = parseInt(document.getElementById('res-round')?.value);
+  if(!rn){ showStatus('res-status','Select a round first','err'); return; }
+  const results=[], lapTimes={};
+  for(let i=1;i<=12;i++){
+    const v=document.getElementById(`pos-${i}`)?.value;
+    const t=document.getElementById(`lap-inline-${i}`)?.value;
+    if(v){ results.push(v); if(t) lapTimes[v]=parseFloat(t); }
+  }
+  const payload={
+    roundNum:rn, results, lapTimes,
+    fastestLap:      document.getElementById('res-fl').value,
+    fastestLapTime:  document.getElementById('res-fl-time').value,
+    fastestPrac:     document.getElementById('res-fp').value,
+    fastestPracTime: document.getElementById('res-fp-time').value,
+    narrative:       document.getElementById('res-narrative')?.value||'',
+    report:          document.getElementById('res-report')?.value||'',
+    updatedAt:       new Date().toISOString()
+  };
+  try {
+    showStatus('res-status','Saving...','info');
+    await db.collection('rounds').doc(`round-${rn}`).set(payload,{merge:true});
+    showStatus('res-status',`✓ Round ${rn} results + report saved`,'ok');
+    // Auto-send notification if results are new
+    await db.collection('notifications').add({
+      title: `🏁 FF1 — Round ${rn} Results`,
+      body: `Race results are in! Check the standings.`,
+      url: '/#results',
+      timestamp: Date.now(), sent: false, auto: true
+    });
+  } catch(e){ showStatus('res-status','Error: '+e.message,'err'); }
+};
+
+// ── PDF/Text Parser ──
+let parsedResults = null;
+const ALL_DRIVERS=['Alan','Chris','Clem','Daniel','David N','David R','Euge','Gavin',
+  'James','Kosta','Ky','Matt C','Matt S','May','Michael','Peter',
+  'Pip','Rian','Richard','Rob','Tim'];
+
+async function parsePDF(input){
+  const file=input.files[0]; if(!file) return;
+  showStatus('pdf-parse-status','Reading file...','info');
+  const ext=file.name.split('.').pop().toLowerCase();
+  try {
+    const text=await file.text();
+    parseResultsText(text);
+  } catch(e){ showStatus('pdf-parse-status','Error: '+e.message,'err'); }
+}
+
+function parseResultsText(text){
+  const lines=text.split(/\n|\r/).map(l=>l.trim()).filter(Boolean);
+  const found=[]; const lapTimes={};
+  lines.forEach(line=>{
+    const driver=ALL_DRIVERS.find(d=>line.toLowerCase().includes(d.toLowerCase()));
+    if(driver&&!found.includes(driver)){
+      found.push(driver);
+      const tm=line.match(/(\d{1,2}[:.]?\d{2}\.\d{3})/);
+      if(tm){
+        const raw=tm[1];
+        lapTimes[driver]=raw.includes(':')?
+          (parseInt(raw.split(':')[0])*60+parseFloat(raw.split(':')[1])).toFixed(3):
+          parseFloat(raw).toFixed(3);
+      }
+    }
+  });
+  if(!found.length){ showStatus('pdf-parse-status','No drivers found — try .txt or .csv','err'); return; }
+  parsedResults={results:found,lapTimes};
+  const preview=document.getElementById('pdf-extracted');
+  preview.innerHTML=found.map((d,i)=>{
+    const t=lapTimes[d]||'—';
+    return '<div style="padding:3px 0;border-bottom:1px solid #1a1a1a;">'+
+      (i+1)+'. <strong>'+d+'</strong> '+(t!=='—'?'<span style="color:#666">'+t+'s</span>':'')+
+      ' <select onchange="updateParsedDriver('+i+',this.value)" style="background:#1a1a1a;border:1px solid #333;color:#f0f0f0;padding:2px;margin-left:6px;font-size:0.8rem;">'+
+      '<option value="'+d+'">'+d+'</option>'+
+      ALL_DRIVERS.filter(x=>x!==d).map(x=>'<option value="'+x+'">'+x+'</option>').join('')+
+      '</select></div>';
+  }).join('');
+  document.getElementById('pdf-preview').style.display='block';
+  showStatus('pdf-parse-status','Found '+found.length+' drivers. Review then confirm.','ok');
+}
+
+function updateParsedDriver(idx,name){ if(parsedResults) parsedResults.results[idx]=name; }
+
+async function confirmPDFResults(){
+  const rn=parseInt(document.getElementById('pdf-round').value);
+  if(!rn){showStatus('pdf-save-status','Select a round first','err');return;}
+  if(!parsedResults){showStatus('pdf-save-status','No results to save','err');return;}
+  try {
+    showStatus('pdf-save-status','Saving...','info');
+    await db.collection('rounds').doc('round-'+rn).set({roundNum:rn,...parsedResults,updatedAt:new Date().toISOString()},{merge:true});
+    showStatus('pdf-save-status','Round '+rn+' saved from PDF','ok');
+    document.getElementById('pdf-preview').style.display='none';
+    parsedResults=null;
+  } catch(e){showStatus('pdf-save-status','Error: '+e.message,'err');}
+}
+
+// ── Attendance Summary ──
+let attUnsub=null;
+
+async function loadAttendanceSummary(){
+  const rn=document.getElementById('att-round-sel').value; if(!rn) return;
+  const roundLabels={'3':'Round 3','4':'Round 4','5':'Round 5','6':'Round 6',
+    '7':'Round 7','8':'Round 8','9':'Round 9','10':'Round 10','11':'Round 11'};
+  const roundLabel=roundLabels[rn]||'Round '+rn;
+  if(attUnsub) attUnsub();
+  document.getElementById('att-summary').style.display='block';
+  attUnsub=db.collection('attendance').where('round','==',roundLabel).onSnapshot(snap=>{
+    const yes=[],maybe=[],no=[];
+    snap.forEach(d=>{
+      const data=d.data();
+      if(data.response==='yes') yes.push(data.driver);
+      else if(data.response==='maybe') maybe.push(data.driver);
+      else if(data.response==='no') no.push(data.driver);
+    });
+    document.getElementById('att-yes-count').textContent=yes.length;
+    document.getElementById('att-maybe-count').textContent=maybe.length;
+    document.getElementById('att-no-count').textContent=no.length;
+    const tag=(n,c)=>'<span style="background:#1a1a1a;border:1px solid '+c+';color:'+c+';padding:3px 10px;font-family:var(--mono);font-size:0.75rem;">'+n+'</span>';
+    document.getElementById('att-yes-list').innerHTML=yes.map(n=>tag(n,'#2ecc71')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444">None yet</span>';
+    document.getElementById('att-maybe-list').innerHTML=maybe.map(n=>tag(n,'#f1c40f')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444">None</span>';
+    document.getElementById('att-no-list').innerHTML=no.map(n=>tag(n,'#E8002D')).join('')||'<span style="font-family:var(--mono);font-size:0.75rem;color:#444">None</span>';
+    const responded=new Set([...yes,...maybe,...no]);
+    const none=ALL_DRIVERS.filter(d=>!responded.has(d));
+    document.getElementById('att-none-list').innerHTML=none.map(n=>tag(n,'#333')).join('');
+  });
+}
+
+function copyAttendanceText(){
+  const rn=document.getElementById('att-round-sel').value;
+  const yes=Array.from(document.getElementById('att-yes-list').querySelectorAll('span')).map(s=>s.textContent);
+  const maybe=Array.from(document.getElementById('att-maybe-list').querySelectorAll('span')).map(s=>s.textContent);
+  const none=Array.from(document.getElementById('att-none-list').querySelectorAll('span')).map(s=>s.textContent);
+  const text='FF1 Round '+rn+' Attendance\n\n'+
+    '✅ Racing ('+yes.length+'): '+(yes.join(', ')||'None')+'\n'+
+    '❓ Maybe ('+maybe.length+'): '+(maybe.join(', ')||'None')+'\n'+
+    '⏳ No response: '+(none.join(', ')||'All responded!');
+  navigator.clipboard.writeText(text)
+    .then(()=>showStatus('att-copy-status','✓ Copied','ok'))
+    .catch(()=>showStatus('att-copy-status','Copy failed','err'));
+}
+</script>

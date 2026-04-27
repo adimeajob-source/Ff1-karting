@@ -1,0 +1,7 @@
+[build]
+  functions = "functions"
+
+# ── Scheduled functions ──
+# Runs daily at 9am Melbourne time (AEST = UTC+10, so 11pm UTC)
+[functions."ff1-scheduler"]
+  schedule = "0 23 * * *"
