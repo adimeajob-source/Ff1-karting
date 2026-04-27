@@ -1,5 +1,5 @@
 [build]
-  functions = "functions"
+  functions = "netlify/functions"
 
 # ── Scheduled functions ──
 # Runs daily at 9am Melbourne time (AEST = UTC+10, so 11pm UTC)
