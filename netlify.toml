@@ -1,7 +1,1 @@
-[build]
-  functions = "netlify/functions"
-
-# ── Scheduled functions ──
-# Runs daily at 9am Melbourne time (AEST = UTC+10, so 11pm UTC)
-[functions."ff1-scheduler"]
-  schedule = "0 23 * * *"
+# FF1 Karting — Static site only
